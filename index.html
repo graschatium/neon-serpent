@@ -2613,6 +2613,22 @@ if (onlineState === 'playing') {
     if (hat && !dead) hat.draw(ctx, hx, hy, CELL, dir);
   }
 
+// Serpent adverse (vrai joueur online)
+  if (onlineState === 'playing' && !isBotGame && onlineOpponentSnake.length > 0) {
+    onlineOpponentSnake.forEach((seg, i) => {
+      drawSnakeSegment(ctx, seg, i, onlineOpponentSnake, MULTI_SKIN_P2, {x:0,y:0}, false, false, false);
+    });
+    // Yeux adversaire
+    const oh = onlineOpponentSnake[0];
+    if (oh) {
+      const ohx = oh.x * ONLINE_CELL, ohy = oh.y * ONLINE_CELL;
+      ctx.fillStyle = '#ff2d78'; ctx.shadowColor = '#ff2d78'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(ohx + ONLINE_CELL - 4, ohy + 4, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ohx + ONLINE_CELL - 4, ohy + ONLINE_CELL - 4, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
   if (onlineState === 'playing' && isBotGame && botSnake.length > 0) {
     botSnake.forEach((seg, i) => {
       drawSnakeSegment(ctx, seg, i, botSnake, MULTI_SKIN_P2, botDir, botDead, false, false);
