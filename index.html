@@ -1991,7 +1991,8 @@ if (nx < 0 || nx >= ONLINE_COLS || ny < 0 || ny >= ONLINE_ROWS) { endOnlineGame(
   // Collision self
   if (snake.some(s => s.x === h.x && s.y === h.y)) { endOnlineGame('LOSE'); return; }
   // Collision adversaire
-  if (onlineOpponentSnake.some(s => s.x === h.x && s.y === h.y)) { endOnlineGame('LOSE'); return; }
+ if (onlineOpponentSnake.some(s => s.x === h.x && s.y === h.y)) { endOnlineGame('LOSE'); return; }
+  if (onlineObstacles.some(o => o.x === h.x && o.y === h.y)) { endOnlineGame('LOSE'); return; }
 
   // Trail
   trailBuf.push({x:snake[0].x, y:snake[0].y});
@@ -2544,19 +2545,18 @@ function drawGame() {
     trailBuf2.forEach((t, i) => { const a = (i / trailBuf2.length) * 0.2; ctx.fillStyle = `rgba(255,45,120,${a})`; ctx.fillRect(t.x * CELL + 2, t.y * CELL + 2, CELL - 4, CELL - 4); });
   }
 
-  // Obstacles
-  obstacles.forEach(o => { const x = o.x * CELL, y = o.y * CELL; ctx.fillStyle = 'rgba(255,107,53,0.1)'; ctx.fillRect(x, y, CELL, CELL); ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 1; ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2); ctx.strokeStyle = 'rgba(255,107,53,0.4)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + 3, y + 3); ctx.lineTo(x + CELL - 3, y + CELL - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + CELL - 3, y + 3); ctx.lineTo(x + 3, y + CELL - 3); ctx.stroke(); });
-
+  // Obstacles — solo/multi uniquement
+  if (onlineState !== 'playing') {
+    obstacles.forEach(o => { const x = o.x * CELL, y = o.y * CELL; ctx.fillStyle = 'rgba(255,107,53,0.1)'; ctx.fillRect(x, y, CELL, CELL); ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 1; ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2); ctx.strokeStyle = 'rgba(255,107,53,0.4)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + 3, y + 3); ctx.lineTo(x + CELL - 3, y + CELL - 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + CELL - 3, y + 3); ctx.lineTo(x + 3, y + CELL - 3); ctx.stroke(); });
+  }
 if (onlineState === 'playing') {
     onlineObstacles.forEach(o => {
-      const x = o.x*ONLINE_CELL, y = o.y*ONLINE_CELL;
-      ctx.fillStyle = 'rgba(255,107,53,0.1)';
-      ctx.fillRect(x, y, ONLINE_CELL, ONLINE_CELL);
-      ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 1;
-      ctx.strokeRect(x+1, y+1, ONLINE_CELL-2, ONLINE_CELL-2);
+      const x = o.x * ONLINE_CELL, y = o.y * ONLINE_CELL;
+      ctx.fillStyle = 'rgba(255,107,53,0.1)'; ctx.fillRect(x, y, ONLINE_CELL, ONLINE_CELL);
+      ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 1; ctx.strokeRect(x+1, y+1, ONLINE_CELL-2, ONLINE_CELL-2);
       ctx.strokeStyle = 'rgba(255,107,53,0.4)'; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.moveTo(x+3,y+3); ctx.lineTo(x+ONLINE_CELL-3,y+ONLINE_CELL-3); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x+ONLINE_CELL-3,y+3); ctx.lineTo(x+3,y+ONLINE_CELL-3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+3, y+3); ctx.lineTo(x+ONLINE_CELL-3, y+ONLINE_CELL-3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+ONLINE_CELL-3, y+3); ctx.lineTo(x+3, y+ONLINE_CELL-3); ctx.stroke();
     });
   }
 
