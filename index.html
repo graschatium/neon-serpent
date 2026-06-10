@@ -3061,10 +3061,12 @@ function execCmd(raw) {
       ['event start <type> [h]',     'Lance un event global (défaut: 2h)'],
       ['event end',                  'Termine l\'event en cours'],
       ['event status',               'Affiche l\'event actif'],
-      ['', '── ROOMS ONLINE ─────────────────────────────────────────'],
-      ['room list',                  'Affiche les rooms Firebase actives'],
-      ['room kick <code>',           'Vide une room'],
-      ['room close <code>',          'Supprime une room'],
+      ['', '── MATCHMAKING ─────────────────────────────────────'],
+      ['match list',                  'Liste les matches Firebase actifs'],
+      ['match kick <matchId>',        'Force la fin d\'un match'],
+      ['match close <matchId>',       'Supprime un match Firebase'],
+      ['queue list',                  'Joueurs en attente de match'],
+      ['queue clear',                 'Vide toute la file d\'attente'],
       ['', '── JOUEURS FIREBASE ────────────────────────────────────'],
       ['player info <uid>',          'Infos d\'un joueur Firebase'],
       ['player give coins <uid> <n>','Donne des coins à un joueur Firebase'],
@@ -3252,36 +3254,67 @@ function execCmd(raw) {
     return;
   }
 
-  // ── room ──────────────────────────────────
-  if (cmd === 'room') {
-    if (!window._fb?.ready) { cmdPrint('Firebase requis pour les commandes room.', 'err'); return; }
-    const { db, ref, get, set, remove } = window._fb;
+// ── match ─────────────────────────────────
+  if (cmd === 'match') {
+    if (!window._fb?.ready) { cmdPrint('Firebase requis.', 'err'); return; }
+    const { db, ref, get, set } = window._fb;
     if (args[0] === 'list') {
-      cmdPrint('Récupération des rooms…', 'sys');
-      get(ref(db, 'rooms')).then(snap => {
-        if (!snap.exists()) { cmdPrint('Aucune room active.', 'warn'); return; }
-        const rooms = snap.val();
-        cmdPrint(`── ROOMS ACTIVES (${Object.keys(rooms).length}) ──────────────`, 'info');
-        Object.entries(rooms).forEach(([code, r]) => {
-          cmdPrint(`  ${code}  state:${r.state || '?'}  p1:${r.p1?.pseudo||'?'}  p2:${r.p2?.pseudo||'—'}`, 'out');
+      cmdPrint('Récupération des matches…', 'sys');
+      get(ref(db, 'matchmaking/matches')).then(snap => {
+        if (!snap.exists()) { cmdPrint('Aucun match actif.', 'warn'); return; }
+        const matches = snap.val();
+        cmdPrint(`── MATCHES ACTIFS (${Object.keys(matches).length}) ──────────`, 'info');
+        Object.entries(matches).forEach(([id, m]) => {
+          const p1 = m.p1?.pseudo || '?';
+          const p2 = m.p2?.pseudo || '?';
+          const state = m.state || '?';
+          const age = m.createdAt ? Math.round((Date.now() - m.createdAt) / 1000) + 's' : '?';
+          cmdPrint(`  ${id}`, 'out');
+          cmdPrint(`    state:${state}  p1:${p1}  p2:${p2}  age:${age}`, 'sys');
         });
       }).catch(e => cmdPrint('Erreur: ' + e.message, 'err'));
     } else if (args[0] === 'kick' && rawArgs[1]) {
-      const code = rawArgs[1].toUpperCase();
-      set(ref(db, `rooms/${code}/state`), 'ended')
-        .then(() => cmdPrint(`✓ Room ${code} vidée (state → ended).`, 'ok'))
+      const matchId = rawArgs[1];
+      set(ref(db, `matchmaking/matches/${matchId}/state`), 'ended')
+        .then(() => cmdPrint(`✓ Match ${matchId} terminé (state → ended).`, 'ok'))
         .catch(e => cmdPrint('Erreur: ' + e.message, 'err'));
     } else if (args[0] === 'close' && rawArgs[1]) {
-      const code = rawArgs[1].toUpperCase();
-      // firebase-database remove via set null
-      set(ref(db, `rooms/${code}`), null)
-        .then(() => cmdPrint(`✓ Room ${code} supprimée.`, 'ok'))
+      const matchId = rawArgs[1];
+      set(ref(db, `matchmaking/matches/${matchId}`), null)
+        .then(() => cmdPrint(`✓ Match ${matchId} supprimé.`, 'ok'))
         .catch(e => cmdPrint('Erreur: ' + e.message, 'err'));
     } else {
-      cmdPrint('Usage: room [list | kick <code> | close <code>]', 'err');
+      cmdPrint('Usage: match [list | kick <matchId> | close <matchId>]', 'err');
     }
     return;
   }
+
+  // ── queue ─────────────────────────────────
+  if (cmd === 'queue') {
+    if (!window._fb?.ready) { cmdPrint('Firebase requis.', 'err'); return; }
+    const { db, ref, get, set } = window._fb;
+    if (args[0] === 'list') {
+      cmdPrint('Récupération de la file…', 'sys');
+      get(ref(db, 'matchmaking/queue')).then(snap => {
+        if (!snap.exists()) { cmdPrint('File vide.', 'warn'); return; }
+        const queue = snap.val();
+        const entries = Object.entries(queue);
+        cmdPrint(`── FILE D'ATTENTE (${entries.length}) ───────────────`, 'info');
+        entries.forEach(([uid, v]) => {
+          const age = Math.round((Date.now() - (v.ts || Date.now())) / 1000);
+          cmdPrint(`  ${(v.pseudo || '?').padEnd(14)} uid:${uid}  status:${v.status || '?'}  age:${age}s`, 'out');
+        });
+      }).catch(e => cmdPrint('Erreur: ' + e.message, 'err'));
+    } else if (args[0] === 'clear') {
+      set(ref(db, 'matchmaking/queue'), null)
+        .then(() => cmdPrint('✓ File d\'attente vidée.', 'ok'))
+        .catch(e => cmdPrint('Erreur: ' + e.message, 'err'));
+    } else {
+      cmdPrint('Usage: queue [list | clear]', 'err');
+    }
+    return;
+  }
+  
 
   // ── player ────────────────────────────────
   if (cmd === 'player') {
